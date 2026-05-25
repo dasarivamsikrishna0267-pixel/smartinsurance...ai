@@ -1,0 +1,1 @@
+<div class="sb-item" onclick="setActive(this); loadInProgressClaims()"><span class="ico">🔄</span> In Progress</div>

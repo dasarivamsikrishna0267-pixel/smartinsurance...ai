@@ -1,0 +1,1 @@
+<div class="sb-item" onclick="setActive(this); loadFraudCenter()"><span class="ico">🛡️</span> Fraud Center <span class="sb-badge badge-red" id="fraudBadge">--</span></div>

@@ -1,0 +1,1 @@
+<div class="sb-item" onclick="setActive(this);showPage('analyticsPage');loadAnalyticsData()"><span class="ico">📈</span> Analytics</div>

@@ -1,0 +1,28 @@
+// Function triggered when the admin clicks "Save Settings"
+function saveSettings() {
+  // 1. Gather the updated values from your HTML inputs
+  const updatedSettings = {
+    aiConfiguration: {
+      autoApproveLimit: parseInt(document.getElementById('auto-approve-input').value),
+      highRiskThreshold: parseInt(document.getElementById('high-risk-input').value)
+    },
+    notifications: {
+      emailAlerts: document.getElementById('email-toggle').checked
+    }
+  };
+
+  // 2. Send the PUT request to the backend
+  fetch('http://localhost:8000/api/settings', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(updatedSettings)
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log("Settings updated:", data);
+    alert("System configuration saved successfully!");
+  })
+  .catch(error => console.error("Error saving settings:", error));
+}

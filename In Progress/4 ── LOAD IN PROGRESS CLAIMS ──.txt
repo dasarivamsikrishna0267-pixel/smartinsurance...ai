@@ -1,0 +1,50 @@
+// ── LOAD IN PROGRESS CLAIMS ──
+async function loadInProgressClaims() {
+  // 1. Show the main dashboard/claims page container
+  showPage('dashPage');
+
+  // 2. Change the page headers
+  document.querySelector('.panel-head h3').textContent = 'Active Claims Processing';
+  document.querySelector('.panel-head p').textContent = 'Claims currently assigned to adjusters for active investigation';
+
+  try {
+    // 3. Fetch the specific In Progress Stats from our backend
+    const statsResponse = await fetch('http://localhost:3000/api/inprogress-stats');
+    const stats = await statsResponse.json();
+
+    // 4. Update the Top KPI Cards
+    const kpiVals = document.querySelectorAll('.kpi-val');
+    const kpiLabels = document.querySelectorAll('.kpi-label');
+    const kpiIcons = document.querySelectorAll('.kpi-icon');
+    
+    // Card 1: Total Processing
+    kpiVals[0].textContent = stats.totalProcessing;
+    kpiLabels[0].textContent = "Claims In Progress";
+    kpiIcons[0].textContent = "🔄";
+    kpiIcons[0].className = "kpi-icon cyan";
+    
+    // Card 2: Value Under Review
+    kpiVals[1].textContent = stats.totalValueUnderReview;
+    kpiLabels[1].textContent = "Value Under Investigation";
+    kpiIcons[1].textContent = "🔎";
+    kpiIcons[1].className = "kpi-icon yellow";
+    
+    // Card 3: Active Adjusters
+    kpiVals[2].textContent = stats.activeAdjusters;
+    kpiLabels[2].textContent = "Active Adjusters Online";
+    kpiIcons[2].textContent = "🧑‍💼";
+    kpiIcons[2].className = "kpi-icon blue"; // Reusing blue styling if available, otherwise falls back gracefully
+    
+    // Card 4: Average Time in Stage
+    kpiVals[3].textContent = stats.avgTimeInStage;
+    kpiLabels[3].textContent = "Avg. Time in Stage";
+    kpiIcons[3].textContent = "⏳";
+    kpiIcons[3].className = "kpi-icon cyan";
+
+    // 5. Reuse our existing table function to load ONLY "Processing" claims!
+    loadAllClaims('', 'Processing');
+
+  } catch (error) {
+    console.error("Error loading in progress claims data:", error);
+  }
+}

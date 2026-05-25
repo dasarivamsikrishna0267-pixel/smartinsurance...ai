@@ -1,0 +1,28 @@
+// 9. GET AI INSIGHTS TELEMETRY
+app.get('/api/ai-insights', (req, res) => {
+  // In a production app, this data would be pulled from an MLOps pipeline 
+  // (like MLflow, AWS SageMaker, or Weights & Biases)
+  const insightsData = {
+    overview: {
+      totalProcessed: claimsDatabase.length + 14205, // Base historic volume + current session
+      avgConfidence: "96.4%",
+      accuracyRate: "97.1%",
+      falsePositiveRate: "1.2%" // Percentage of AI fraud flags overturned by humans
+    },
+    topDamagesDetected: [
+      { label: "Front Bumper", percentage: 42 },
+      { label: "Side Door/Fender", percentage: 28 },
+      { label: "Windshield/Glass", percentage: 15 },
+      { label: "Rear Bumper", percentage: 10 },
+      { label: "Undercarriage", percentage: 5 }
+    ],
+    recentDeployments: [
+      { version: "Damage-Vision v4.2", date: "21 May 2026", status: "Active", notes: "Improved edge detection on dark vehicles and nighttime photos." },
+      { version: "Fraud-Detect v2.1", date: "15 May 2026", status: "Active", notes: "Added deepfake metadata scanning and EXIF anomaly detection." },
+      { version: "Damage-Vision v4.1", date: "02 Apr 2026", status: "Archived", notes: "Deprecated due to high false-positive rate in heavy rain conditions." },
+      { version: "Cost-Estimator v1.8", date: "10 Mar 2026", status: "Active", notes: "Updated repair labor rates for Maharashtra and Karnataka regions." }
+    ]
+  };
+
+  res.status(200).json(insightsData);
+});

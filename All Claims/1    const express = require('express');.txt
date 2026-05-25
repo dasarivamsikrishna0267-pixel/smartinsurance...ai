@@ -1,0 +1,77 @@
+const express = require('express');
+const cors = require('cors');
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+// ==========================================
+// MOCK DATABASE: CLAIMS
+// ==========================================
+let claimsDatabase = [
+  { id: "INS-8821", customer: "Arjun Mehta", type: "Motor – Collision", amount: "₹42,000", fraudScore: 3, fraudLevel: "low", status: "Approved", date: "2026-05-21T09:28:00Z" },
+  { id: "INS-8820", customer: "Priya Sharma", type: "Motor – Theft", amount: "₹2,85,000", fraudScore: 41, fraudLevel: "med", status: "In Review", date: "2026-05-20T14:15:00Z" },
+  { id: "INS-8819", customer: "Rahul Verma", type: "Motor – Fire", amount: "₹6,20,000", fraudScore: 78, fraudLevel: "high", status: "Flagged", date: "2026-05-20T11:42:00Z" },
+  { id: "INS-8818", customer: "Deepa Nair", type: "Motor – Collision", amount: "₹68,500", fraudScore: 7, fraudLevel: "low", status: "Approved", date: "2026-05-19T16:05:00Z" },
+  { id: "INS-8817", customer: "Suresh Kumar", type: "Motor – Vandalism", amount: "₹18,200", fraudScore: 11, fraudLevel: "low", status: "Processing", date: "2026-05-19T09:30:00Z" },
+  { id: "INS-8816", customer: "Ananya Iyer", type: "Motor – Flood", amount: "₹1,15,000", fraudScore: 33, fraudLevel: "med", status: "In Review", date: "2026-05-18T18:20:00Z" }
+];
+
+// ==========================================
+// API ENDPOINTS: ALL CLAIMS
+// ==========================================
+
+// 1. GET ALL CLAIMS (With optional filtering & searching)
+app.get('/api/claims', (req, res) => {
+  const { status, search } = req.query;
+  let results = [...claimsDatabase];
+
+  // Filter by status (e.g., /api/claims?status=Approved)
+  if (status) {
+    results = results.filter(claim => claim.status.toLowerCase() === status.toLowerCase());
+  }
+
+  // Filter by search query (e.g., /api/claims?search=Arjun)
+  if (search) {
+    const query = search.toLowerCase();
+    results = results.filter(claim => 
+      claim.customer.toLowerCase().includes(query) || 
+      claim.id.toLowerCase().includes(query)
+    );
+  }
+
+  res.status(200).json(results);
+});
+
+// 2. GET SINGLE CLAIM DETAILS
+app.get('/api/claims/:id', (req, res) => {
+  const claimId = req.params.id;
+  const claim = claimsDatabase.find(c => c.id === claimId);
+  
+  if (!claim) {
+    return res.status(404).json({ error: "Claim not found" });
+  }
+  
+  res.status(200).json(claim);
+});
+
+// 3. UPDATE CLAIM STATUS (Approve, Reject, Hold)
+app.patch('/api/claims/:id/status', (req, res) => {
+  const claimId = req.params.id;
+  const { status } = req.body;
+
+  const claimIndex = claimsDatabase.findIndex(c => c.id === claimId);
+  
+  if (claimIndex === -1) {
+    return res.status(404).json({ error: "Claim not found" });
+  }
+
+  // Update the status in the database
+  claimsDatabase[claimIndex].status = status;
+
+  console.log(`🔄 Claim ${claimId} updated to: ${status}`);
+  res.status(200).json({ message: "Status updated successfully", claim: claimsDatabase[claimIndex] });
+});
+
+const PORT = 3000;
+app.listen(PORT, () => console.log(`🚀 Claims API running on http://localhost:${PORT}`));

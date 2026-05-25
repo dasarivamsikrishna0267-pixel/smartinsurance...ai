@@ -1,0 +1,93 @@
+// --- ACCESS CONTROL DATABASE (Simulated) ---
+// Define the specific roles and what they are allowed to do.
+const rolesAndPermissions = {
+  "Super Admin": ["view_all", "edit_all", "delete_all", "manage_users", "approve_payouts", "modify_ai_models"],
+  "Fraud Analyst": ["view_claims", "view_forensics", "flag_claims", "view_customers"],
+  "Senior Adjuster": ["view_claims", "edit_claims", "approve_claims_under_5L", "view_customers"],
+  "Junior Adjuster": ["view_claims", "edit_claims", "request_approval"],
+  "Auditor": ["view_all", "export_reports"] // Read-only access
+};
+
+// Internal users who have access to the admin dashboard (Sneha Rao is from your HTML!)
+let systemUsers = [
+  { id: "USR-001", name: "Sneha Rao", email: "sneha.rao@insureai.com", role: "Super Admin", status: "Active", lastLogin: "2026-05-21T09:42:00Z" },
+  { id: "USR-002", name: "Aditya Kumar", email: "aditya.k@insureai.com", role: "Senior Adjuster", status: "Active", lastLogin: "2026-05-21T08:15:00Z" },
+  { id: "USR-003", name: "Nisha Reddy", email: "nisha.r@insureai.com", role: "Junior Adjuster", status: "Active", lastLogin: "2026-05-20T16:45:00Z" },
+  { id: "USR-004", name: "Karan Desai", email: "karan.d@insureai.com", role: "Fraud Analyst", status: "Suspended", lastLogin: "2026-05-10T11:20:00Z" }
+];
+
+// --- ACCESS CONTROL API ROUTES ---
+
+// 1. GET: Fetch all roles and their permissions
+app.get('/api/access/roles', (req, res) => {
+  res.json(rolesAndPermissions);
+});
+
+// 2. GET: Fetch all internal system users
+app.get('/api/access/users', (req, res) => {
+  res.json(systemUsers);
+});
+
+// 3. POST: Invite/Add a new internal user to the dashboard
+app.post('/api/access/users', (req, res) => {
+  const newUser = req.body;
+  
+  if (!newUser.name || !newUser.email || !newUser.role) {
+    return res.status(400).json({ error: "Name, email, and role are required." });
+  }
+
+  // Ensure the role actually exists in our system
+  if (!rolesAndPermissions[newUser.role]) {
+    return res.status(400).json({ error: "Invalid role specified." });
+  }
+
+  newUser.id = `USR-${Math.floor(Math.random() * 900 + 100)}`;
+  newUser.status = newUser.status || "Pending Invite"; // They need to set a password first
+  newUser.lastLogin = null;
+  
+  systemUsers.push(newUser);
+  
+  res.status(201).json({ message: "User invited successfully", user: newUser });
+});
+
+// 4. PUT: Change a user's role or status (e.g., Promoting someone or Suspending an account)
+app.put('/api/access/users/:id', (req, res) => {
+  const userId = req.params.id;
+  const userIndex = systemUsers.findIndex(u => u.id === userId);
+  
+  if (userIndex === -1) {
+    return res.status(404).json({ error: "System user not found." });
+  }
+
+  // If changing role, verify it's a valid role
+  if (req.body.role && !rolesAndPermissions[req.body.role]) {
+    return res.status(400).json({ error: "Invalid role specified." });
+  }
+  
+  systemUsers[userIndex] = { ...systemUsers[userIndex], ...req.body, id: userId };
+  
+  res.json({ message: "User access updated successfully", user: systemUsers[userIndex] });
+});
+
+// 5. DELETE: Revoke access completely (Remove user)
+app.delete('/api/access/users/:id', (req, res) => {
+  const userId = req.params.id;
+  const initialLength = systemUsers.length;
+  
+  // Super Admin safety check: prevent deleting the last Super Admin (Sneha Rao)
+  const userToDelete = systemUsers.find(u => u.id === userId);
+  if (userToDelete && userToDelete.role === "Super Admin") {
+    const adminCount = systemUsers.filter(u => u.role === "Super Admin").length;
+    if (adminCount <= 1) {
+      return res.status(403).json({ error: "Cannot delete the last Super Admin. System requires at least one." });
+    }
+  }
+
+  systemUsers = systemUsers.filter(u => u.id !== userId);
+  
+  if (systemUsers.length === initialLength) {
+    return res.status(404).json({ error: "System user not found." });
+  }
+  
+  res.json({ message: "User access revoked and account deleted." });
+});

@@ -1,0 +1,9 @@
+// Fetch all customers from the backend
+fetch('http://localhost:8000/api/customers')
+  .then(response => response.json())
+  .then(data => {
+    console.log("Here are the customers:", data);
+    // You would then write a function here to loop through 'data' 
+    // and create HTML table rows (<tr>) for each customer!
+  })
+  .catch(error => console.error("Error loading customers:", error));

@@ -1,0 +1,50 @@
+// ── LOAD APPROVED CLAIMS ──
+async function loadApprovedClaims() {
+  // 1. Show the main dashboard/claims page container
+  showPage('dashPage');
+
+  // 2. Change the page headers
+  document.querySelector('.panel-head h3').textContent = 'Approved Claims Ledger';
+  document.querySelector('.panel-head p').textContent = 'Historically approved claims and disbursed payouts';
+
+  try {
+    // 3. Fetch the specific Approved Stats from our backend
+    const statsResponse = await fetch('http://localhost:3000/api/approved-stats');
+    const stats = await statsResponse.json();
+
+    // 4. Update the Top KPI Cards
+    const kpiVals = document.querySelectorAll('.kpi-val');
+    const kpiLabels = document.querySelectorAll('.kpi-label');
+    const kpiIcons = document.querySelectorAll('.kpi-icon');
+    
+    // Card 1: Total Approved
+    kpiVals[0].textContent = stats.totalApproved;
+    kpiLabels[0].textContent = "Total Approved Claims";
+    kpiIcons[0].textContent = "✅";
+    kpiIcons[0].className = "kpi-icon green";
+    
+    // Card 2: Total Payouts
+    kpiVals[1].textContent = stats.totalPayoutDisbursed;
+    kpiLabels[1].textContent = "Total Capital Disbursed";
+    kpiIcons[1].textContent = "💸";
+    kpiIcons[1].className = "kpi-icon cyan";
+    
+    // Card 3: Auto-Approval Volume
+    kpiVals[2].textContent = stats.autoApproved;
+    kpiLabels[2].textContent = "Auto-Approved by AI";
+    kpiIcons[2].textContent = "🤖";
+    kpiIcons[2].className = "kpi-icon yellow";
+    
+    // Card 4: Avg Processing Time
+    kpiVals[3].textContent = stats.avgProcessingTime;
+    kpiLabels[3].textContent = "Avg. Processing Time";
+    kpiIcons[3].textContent = "⚡";
+    kpiIcons[3].className = "kpi-icon cyan";
+
+    // 5. Reuse our existing table function to load ONLY "Approved" claims!
+    loadAllClaims('', 'Approved');
+
+  } catch (error) {
+    console.error("Error loading approved claims data:", error);
+  }
+}

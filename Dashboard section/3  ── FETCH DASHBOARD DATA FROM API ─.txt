@@ -1,0 +1,84 @@
+// ── FETCH DASHBOARD DATA FROM API ──
+async function loadDashboardData() {
+  try {
+    const response = await fetch('http://localhost:3000/api/dashboard');
+    const data = await response.json();
+    
+    renderChart(data.chartData);
+    renderRecentClaims(data.recentClaims);
+    renderActivityFeed(data.activityFeed);
+    
+  } catch (error) {
+    console.error("Failed to load dashboard data:", error);
+  }
+}
+
+// ── RENDER CHART ──
+function renderChart(chartData) {
+  const { months, claims, payouts } = chartData;
+  const maxVal = Math.max(...claims);
+  const chart = document.getElementById('barChart');
+  chart.innerHTML = ''; // Clear existing chart
+  
+  months.forEach((m, i) => {
+    const ch = Math.round((claims[i] / maxVal) * 150);
+    const ph = Math.round((payouts[i] / maxVal) * 150);
+    const group = document.createElement('div');
+    group.className = 'bar-group';
+    group.innerHTML = `
+      <div class="bar b-cyan" style="height:${ch}px" title="${m}: ${claims[i]}"></div>
+      <div class="bar b-blue" style="height:${ph}px" title="Payouts: ${payouts[i]}"></div>
+      <span class="bar-label">${m}</span>`;
+    chart.appendChild(group);
+  });
+}
+
+// ── RENDER DYNAMIC CLAIMS TABLE ──
+function renderRecentClaims(claims) {
+  // Select the table body in your HTML
+  const tbody = document.querySelector('.table-wrap tbody');
+  tbody.innerHTML = ''; // Clear hardcoded HTML rows
+  
+  claims.forEach(claim => {
+    // Determine status pill styling dynamically
+    let pillClass = 'pill-cyan';
+    if (claim.status === 'Approved') pillClass = 'pill-green';
+    if (claim.status === 'In Review') pillClass = 'pill-yellow';
+    if (claim.status === 'Flagged') pillClass = 'pill-red';
+
+    const row = document.createElement('tr');
+    row.setAttribute('onclick', 'openModal()');
+    row.innerHTML = `
+      <td class="claim-id">${claim.id}</td>
+      <td>${claim.customer}</td>
+      <td>${claim.type}</td>
+      <td class="amount">${claim.amount}</td>
+      <td class="fraud-score fs-${claim.fraudLevel}">${claim.fraudScore}</td>
+      <td><span class="status-pill ${pillClass}"><span class="pill-dot"></span>${claim.status}</span></td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+// ── RENDER ACTIVITY FEED ──
+function renderActivityFeed(activities) {
+  const feedContainer = document.querySelector('.activity-list');
+  feedContainer.innerHTML = ''; // Clear hardcoded HTML feeds
+  
+  activities.forEach(act => {
+    const item = document.createElement('div');
+    item.className = 'act-item';
+    item.innerHTML = `
+      <div class="act-ico ${act.color}">${act.icon}</div>
+      <div class="act-body">
+        <div class="act-title">${act.title}</div>
+        <div class="act-sub">${act.sub}</div>
+      </div>
+      <div class="act-time">${act.time}</div>
+    `;
+    feedContainer.appendChild(item);
+  });
+}
+
+// Initialize the dashboard data when the script loads
+loadDashboardData();

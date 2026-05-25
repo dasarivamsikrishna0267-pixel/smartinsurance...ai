@@ -1,0 +1,9 @@
+function loadSystemUsers() {
+  fetch('http://localhost:8000/api/access/users')
+    .then(response => response.json())
+    .then(users => {
+      console.log("Internal Users:", users);
+      // Loop through users to build your Access Control table here
+    })
+    .catch(error => console.error("Error loading users:", error));
+}

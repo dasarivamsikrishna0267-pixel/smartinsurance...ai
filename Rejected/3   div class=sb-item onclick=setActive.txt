@@ -1,0 +1,1 @@
+<div class="sb-item" onclick="setActive(this); loadRejectedClaims()"><span class="ico">❌</span> Rejected</div>

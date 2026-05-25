@@ -1,0 +1,349 @@
+// ── PAGE SWITCHING ──
+function showPage(pageId) {
+  document.getElementById('dashPage').style.display = 'none';
+  document.getElementById('uploadPage').style.display = 'none';
+  document.getElementById(pageId).style.display = pageId === 'uploadPage' ? 'flex' : 'block';
+  if (pageId === 'uploadPage') document.getElementById(pageId).style.flexDirection = 'column';
+}
+
+// Default: show dashboard
+document.getElementById('dashPage').style.display = 'block';
+
+// Sidebar active state
+function setActive(el) {
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// Dashboard sidebar items default
+document.querySelectorAll('.sb-item').forEach(item => {
+  if (!item.getAttribute('onclick')) {
+    item.addEventListener('click', function() { setActive(this); showPage('dashPage'); });
+  }
+});
+
+// Modal
+function openModal() { document.getElementById('modalOverlay').classList.add('open'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function closeModalOutside(e) { if (e.target === document.getElementById('modalOverlay')) closeModal(); }
+
+// Build bar chart
+const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const claims = [820,940,880,1020,1100,970,1150,1080,1200,1140,1280,1284];
+const payouts = [600,710,650,800,870,740,920,840,980,900,1040,1020];
+const maxVal = Math.max(...claims);
+const chart = document.getElementById('barChart');
+months.forEach((m, i) => {
+  const ch = Math.round((claims[i] / maxVal) * 150);
+  const ph = Math.round((payouts[i] / maxVal) * 150);
+  const group = document.createElement('div');
+  group.className = 'bar-group';
+  group.innerHTML = `<div class="bar b-cyan" style="height:${ch}px" title="${m}: ${claims[i]}"></div><div class="bar b-blue" style="height:${ph}px"></div><span class="bar-label">${m}</span>`;
+  chart.appendChild(group);
+});
+
+// Panel action toggle
+document.querySelectorAll('.pa-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    this.closest('.panel-actions')?.querySelectorAll('.pa-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// Live KPI update
+setInterval(() => {
+  const cards = document.querySelectorAll('.kpi-val');
+  if (cards[3]) cards[3].textContent = (14.2 + (Math.random()-.5)*.4).toFixed(1) + 's';
+}, 3000);
+
+// ── UPLOAD / AI LOGIC ──
+let uploadedFiles = [];
+let analysisComplete = false;
+
+const fileInput = document.getElementById('fileInput');
+const dropZone  = document.getElementById('dropZone');
+const previewImg = document.getElementById('previewImg');
+const previewPlaceholder = document.getElementById('previewPlaceholder');
+const scanOverlay = document.getElementById('scanOverlay');
+const processingBadge = document.getElementById('processingBadge');
+const doneBadge = document.getElementById('doneBadge');
+const aiChip = document.getElementById('aiChip');
+const aiResultsBody = document.getElementById('aiResultsBody');
+const submitBtn = document.getElementById('submitBtn');
+const thumbRow = document.getElementById('thumbRow');
+const photoThumbs = document.getElementById('photoThumbs');
+const photoCount = document.getElementById('photoCount');
+
+// Drag & drop
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  handleFiles(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')));
+});
+
+fileInput.addEventListener('change', () => {
+  handleFiles(Array.from(fileInput.files));
+  fileInput.value = '';
+});
+
+function handleFiles(files) {
+  if (!files.length) return;
+  uploadedFiles = [...uploadedFiles, ...files];
+  photoCount.textContent = uploadedFiles.length;
+  thumbRow.style.display = 'block';
+
+  // Update drop zone appearance
+  document.getElementById('dzIcon').textContent = '✅';
+  document.getElementById('dzTitle').textContent = `${uploadedFiles.length} photo${uploadedFiles.length>1?'s':''} uploaded`;
+  document.getElementById('dzSub').textContent = 'Click or drag to add more photos';
+
+  // Rebuild thumbnails
+  renderThumbnails();
+
+  // Show first new file in preview and run analysis
+  showPreview(uploadedFiles[uploadedFiles.length - 1]);
+}
+
+function renderThumbnails() {
+  photoThumbs.innerHTML = '';
+  uploadedFiles.forEach((file, idx) => {
+    const url = URL.createObjectURL(file);
+    const wrap = document.createElement('div');
+    wrap.className = 'thumb-wrap' + (idx === uploadedFiles.length-1 ? ' selected' : '');
+    wrap.innerHTML = `<img src="${url}" alt="photo ${idx+1}"><div class="thumb-remove" onclick="removePhoto(${idx},event)">✕</div>`;
+    wrap.onclick = (e) => { if (!e.target.classList.contains('thumb-remove')) { document.querySelectorAll('.thumb-wrap').forEach(t=>t.classList.remove('selected')); wrap.classList.add('selected'); showPreview(uploadedFiles[idx]); }};
+    photoThumbs.appendChild(wrap);
+  });
+  const addMore = document.createElement('div');
+  addMore.className = 'add-more-thumb';
+  addMore.textContent = '+';
+  addMore.onclick = () => fileInput.click();
+  photoThumbs.appendChild(addMore);
+}
+
+function removePhoto(idx, e) {
+  e.stopPropagation();
+  uploadedFiles.splice(idx, 1);
+  photoCount.textContent = uploadedFiles.length;
+  if (uploadedFiles.length === 0) {
+    thumbRow.style.display = 'none';
+    previewImg.style.display = 'none';
+    previewPlaceholder.style.display = 'flex';
+    previewPlaceholder.style.flexDirection = 'column';
+    previewPlaceholder.style.alignItems = 'center';
+    scanOverlay.classList.remove('active');
+    processingBadge.style.display = 'none';
+    doneBadge.style.display = 'none';
+    resetAIResults();
+    document.getElementById('dzIcon').textContent = '🚗';
+    document.getElementById('dzTitle').textContent = 'Drop vehicle photos here';
+    document.getElementById('dzSub').textContent = 'Upload front, rear, side, and damage close-ups\nfor the most accurate AI assessment';
+  } else {
+    renderThumbnails();
+    showPreview(uploadedFiles[Math.min(idx, uploadedFiles.length-1)]);
+  }
+}
+
+function showPreview(file) {
+  const url = URL.createObjectURL(file);
+  previewPlaceholder.style.display = 'none';
+  previewImg.src = url;
+  previewImg.style.display = 'block';
+  doneBadge.style.display = 'none';
+  document.getElementById('damageBoxes').innerHTML = '';
+  runAIAnalysis();
+}
+
+function resetAIResults() {
+  aiChip.className = 'ai-status-chip chip-waiting';
+  aiChip.textContent = '⏳ Waiting for photo';
+  aiResultsBody.innerHTML = '<div style="text-align:center;padding:24px 0;color:var(--text3);font-size:0.82rem;">Upload a vehicle photo to run AI analysis</div>';
+  submitBtn.disabled = true;
+  analysisComplete = false;
+  setStep(1);
+}
+
+// AI analysis simulation
+const damageScenarios = [
+  {
+    damages: [
+      { label: 'Front Bumper', pct: 78, color: 'var(--red)', severity: 'High' },
+      { label: 'Hood / Bonnet', pct: 34, color: 'var(--yellow)', severity: 'Moderate' },
+      { label: 'Headlight (Left)', pct: 55, color: 'var(--orange)', severity: 'Moderate' },
+    ],
+    cost: '₹42,000–₹58,000', estimate: 50000, fraudScore: 3, confidence: 97.4,
+    recommendation: 'Minor to moderate front-end impact. Bumper and headlight replacement required. No metadata anomalies. Recommend approval.',
+    boxes: [{top:'30%',left:'5%',w:'38%',h:'40%',lbl:'Front Bumper 78%'},{top:'15%',left:'20%',w:'55%',h:'28%',lbl:'Hood 34%'}]
+  },
+  {
+    damages: [
+      { label: 'Left Door Panel', pct: 82, color: 'var(--red)', severity: 'High' },
+      { label: 'Left Rear Fender', pct: 60, color: 'var(--orange)', severity: 'High' },
+      { label: 'Side Mirror', pct: 45, color: 'var(--yellow)', severity: 'Moderate' },
+    ],
+    cost: '₹85,000–₹1,10,000', estimate: 97500, fraudScore: 12, confidence: 95.1,
+    recommendation: 'Significant side-impact damage. Door panel and fender require replacement. Minor pre-existing rust noted. Review recommended before approval.',
+    boxes: [{top:'20%',left:'15%',w:'65%',h:'50%',lbl:'Door Panel 82%'},{top:'30%',left:'70%',w:'20%',h:'30%',lbl:'Mirror 45%'}]
+  },
+  {
+    damages: [
+      { label: 'Rear Bumper', pct: 65, color: 'var(--orange)', severity: 'High' },
+      { label: 'Boot / Trunk', pct: 40, color: 'var(--yellow)', severity: 'Moderate' },
+    ],
+    cost: '₹28,000–₹45,000', estimate: 36500, fraudScore: 7, confidence: 98.2,
+    recommendation: 'Rear-end collision. Bumper and trunk damage consistent with low-speed impact. Clean image metadata. Auto-approval recommended.',
+    boxes: [{top:'40%',left:'10%',w:'80%',h:'45%',lbl:'Rear Bumper 65%'},{top:'15%',left:'20%',w:'60%',h:'30%',lbl:'Boot 40%'}]
+  },
+  {
+    damages: [
+      { label: 'Windshield', pct: 90, color: 'var(--red)', severity: 'Severe' },
+      { label: 'Roof Panel', pct: 55, color: 'var(--orange)', severity: 'High' },
+      { label: 'A-Pillar (Left)', pct: 42, color: 'var(--yellow)', severity: 'Moderate' },
+    ],
+    cost: '₹1,20,000–₹1,80,000', estimate: 150000, fraudScore: 31, confidence: 93.7,
+    recommendation: 'Rollover or falling object incident detected. Structural integrity may be compromised. Manual inspection recommended before processing.',
+    boxes: [{top:'5%',left:'10%',w:'80%',h:'35%',lbl:'Windshield 90%'},{top:'5%',left:'5%',w:'88%',h:'55%',lbl:'Roof 55%'}]
+  }
+];
+
+let currentScenario = null;
+
+function runAIAnalysis() {
+  analysisComplete = false;
+  submitBtn.disabled = true;
+  setStep(2);
+
+  // Show analyzing state
+  scanOverlay.classList.add('active');
+  processingBadge.style.display = 'flex';
+  doneBadge.style.display = 'none';
+
+  aiChip.className = 'ai-status-chip chip-analyzing';
+  aiChip.innerHTML = '<div class="spinner" style="width:12px;height:12px;border-width:1.5px"></div> Analyzing…';
+
+  aiResultsBody.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px;padding:8px 0;">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(34,211,238,0.04);border:1px solid rgba(34,211,238,0.12);border-radius:10px;">
+        <div class="spinner"></div>
+        <span style="font-size:0.8rem;color:var(--text2)">Running Vision AI model v4.2…</span>
+      </div>
+      <div style="font-family:var(--mono);font-size:0.68rem;color:var(--text3);padding:0 2px;line-height:1.8;">
+        <div id="log1" style="opacity:0;transition:opacity .3s">→ Preprocessing image… </div>
+        <div id="log2" style="opacity:0;transition:opacity .3s">→ Running damage segmentation…</div>
+        <div id="log3" style="opacity:0;transition:opacity .3s">→ Classifying damage zones…</div>
+        <div id="log4" style="opacity:0;transition:opacity .3s">→ Cross-referencing repair cost DB…</div>
+        <div id="log5" style="opacity:0;transition:opacity .3s">→ Running fraud signature check…</div>
+        <div id="log6" style="opacity:0;transition:opacity .3s">→ Generating final assessment…</div>
+      </div>
+    </div>`;
+
+  // Stagger log lines
+  [1,2,3,4,5,6].forEach((n, i) => {
+    setTimeout(() => {
+      const el = document.getElementById('log'+n);
+      if (el) el.style.opacity = '1';
+    }, 300 + i * 380);
+  });
+
+  // Pick random scenario
+  currentScenario = damageScenarios[Math.floor(Math.random() * damageScenarios.length)];
+
+  setTimeout(() => {
+    finishAnalysis(currentScenario);
+  }, 2800);
+}
+
+function finishAnalysis(scenario) {
+  // Stop scan, show done
+  scanOverlay.classList.remove('active');
+  processingBadge.style.display = 'none';
+  doneBadge.style.display = 'flex';
+
+  // Place damage boxes
+  const boxContainer = document.getElementById('damageBoxes');
+  boxContainer.innerHTML = '';
+  scenario.boxes.forEach((b, i) => {
+    const box = document.createElement('div');
+    box.className = 'dmg-box';
+    box.style.cssText = `top:${b.top};left:${b.left};width:${b.w};height:${b.h}`;
+    box.innerHTML = `<span class="dmg-label">${b.lbl}</span>`;
+    boxContainer.appendChild(box);
+    setTimeout(() => box.classList.add('show'), i * 200);
+  });
+
+  // Update AI chip
+  aiChip.className = 'ai-status-chip chip-done';
+  aiChip.textContent = '✓ Analysis Complete';
+
+  // Fraud colour
+  const fc = scenario.fraudScore < 25 ? 'var(--green)' : scenario.fraudScore < 60 ? 'var(--yellow)' : 'var(--red)';
+  const fl = scenario.fraudScore < 25 ? 'Low' : scenario.fraudScore < 60 ? 'Medium' : 'High';
+
+  // Render results
+  aiResultsBody.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div>
+        ${scenario.damages.map(d => `
+          <div class="dmg-result-bar">
+            <div class="drb-row">
+              <span>${d.label}</span>
+              <span style="color:${d.color};font-weight:700;font-family:var(--mono)">${d.pct}% — ${d.severity}</span>
+            </div>
+            <div class="drb-track"><div class="drb-fill" data-w="${d.pct}" style="background:${d.color}"></div></div>
+          </div>`).join('')}
+      </div>
+      <div class="cost-card">
+        <div class="cc-item"><div class="cc-lbl">Est. Repair Cost</div><div class="cc-val" style="color:var(--yellow)">${scenario.cost}</div></div>
+        <div class="cc-item"><div class="cc-lbl">Fraud Score</div><div class="cc-val" style="color:${fc}">${scenario.fraudScore}% — ${fl}</div></div>
+        <div class="cc-item"><div class="cc-lbl">AI Confidence</div><div class="cc-val" style="color:var(--cyan)">${scenario.confidence}%</div></div>
+      </div>
+      <div style="background:rgba(34,211,238,0.06);border:1px solid rgba(34,211,238,0.17);border-radius:10px;padding:12px 14px;">
+        <div style="font-size:.72rem;font-weight:700;color:#67e8f9;margin-bottom:5px">🤖 AI Recommendation</div>
+        <div style="font-size:.77rem;color:var(--text2);line-height:1.6">${scenario.recommendation}</div>
+      </div>
+    </div>`;
+
+  // Animate bars
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.drb-fill').forEach(el => {
+      const w = el.getAttribute('data-w');
+      setTimeout(() => el.style.width = w + '%', 50);
+    });
+  });
+
+  // Step forward
+  setStep(3);
+  analysisComplete = true;
+  submitBtn.disabled = false;
+}
+
+// Step indicator
+function setStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    const el = document.getElementById('step' + i);
+    if (!el) continue;
+    el.classList.remove('active', 'done');
+    if (i < n) el.classList.add('done');
+    else if (i === n) el.classList.add('active');
+  }
+}
+
+// Submit
+function submitClaim() {
+  if (!analysisComplete) return;
+  const name = document.getElementById('f-name').value || 'Unknown Customer';
+  setStep(4);
+  submitBtn.textContent = '✓ Claim Submitted Successfully!';
+  submitBtn.style.background = 'var(--green)';
+  submitBtn.disabled = true;
+  aiChip.className = 'ai-status-chip chip-done';
+  aiChip.textContent = '✓ Submitted for Review';
+
+  // Show success message
+  const msg = document.createElement('div');
+  msg.style.cssText = 'position:fixed;top:20px;right:20px;background:#0a0f1e;border:1px solid rgba(74,222,128,0.4);border-radius:14px;padding:16px 20px;z-index:200;box-shadow:0 20px 50px rgba(0,0,0,0.5);animation:fadeUp .4s ease;';
+  msg.innerHTML = `<div style="font-family:var(--display);font-weight:700;margin-bottom:4px;color:var(--green)">✓ Claim Submitted</div><div style="font-size:.78rem;color:var(--text2)">Claim for <b>${name}</b> is queued for adjuster review.<br><span style="font-family:var(--mono);font-size:.7rem;color:var(--cyan)">#INS-${8822 + Math.floor(Math.random()*10)}</span></div>`;
+  document.body.appendChild(msg);
+  setTimeout(() => msg.remove(), 4000);
+}

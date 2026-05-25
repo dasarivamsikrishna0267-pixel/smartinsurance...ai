@@ -1,0 +1,23 @@
+// 7. GET IN PROGRESS CLAIMS STATISTICS
+app.get('/api/inprogress-stats', (req, res) => {
+  // Filter only the claims that are actively being processed
+  const processingClaims = claimsDatabase.filter(c => c.status === 'Processing');
+  
+  // Calculate total monetary value currently under investigation
+  let totalValue = 0;
+  processingClaims.forEach(c => {
+    const numericValue = parseInt(c.amount.replace(/[^0-9.-]+/g,""));
+    totalValue += numericValue;
+  });
+
+  // Simulate how many unique adjusters are currently online and working on these claims
+  // (In a real app, you would count unique assigned_to IDs from the database)
+  const activeAdjustersCount = processingClaims.length > 0 ? Math.ceil(processingClaims.length / 3) : 0;
+
+  res.status(200).json({
+    totalProcessing: processingClaims.length,
+    activeAdjusters: activeAdjustersCount || 1, // Assume at least 1 adjuster is online
+    avgTimeInStage: "4.5 hrs", // Simulated metric
+    totalValueUnderReview: `₹${totalValue.toLocaleString()}`
+  });
+});

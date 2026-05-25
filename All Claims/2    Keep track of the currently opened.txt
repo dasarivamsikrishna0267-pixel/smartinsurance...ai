@@ -1,0 +1,107 @@
+// Keep track of the currently opened claim for the modal
+let currentClaimId = null;
+
+// ── 1. FETCH AND RENDER ALL CLAIMS ──
+async function loadAllClaims(searchQuery = '', statusFilter = '') {
+  try {
+    // Build the URL with query parameters for searching/filtering
+    let url = 'http://localhost:3000/api/claims?';
+    if (searchQuery) url += `search=${encodeURIComponent(searchQuery)}&`;
+    if (statusFilter) url += `status=${encodeURIComponent(statusFilter)}`;
+
+    const response = await fetch(url);
+    const claims = await response.json();
+
+    const tbody = document.querySelector('.table-wrap tbody');
+    tbody.innerHTML = ''; // Clear out the hardcoded HTML rows
+
+    claims.forEach(claim => {
+      // Determine pill styling dynamically
+      let pillClass = 'pill-cyan';
+      if (claim.status === 'Approved') pillClass = 'pill-green';
+      if (claim.status === 'In Review') pillClass = 'pill-yellow';
+      if (claim.status === 'Flagged' || claim.status === 'Rejected') pillClass = 'pill-red';
+
+      const row = document.createElement('tr');
+      // Pass the claim ID into the openModal function
+      row.setAttribute('onclick', `openClaimModal('${claim.id}')`);
+      
+      row.innerHTML = `
+        <td class="claim-id">${claim.id}</td>
+        <td>${claim.customer}</td>
+        <td>${claim.type}</td>
+        <td class="amount">${claim.amount}</td>
+        <td class="fraud-score fs-${claim.fraudLevel}">${claim.fraudScore}%</td>
+        <td><span class="status-pill ${pillClass}"><span class="pill-dot"></span>${claim.status}</span></td>
+      `;
+      tbody.appendChild(row);
+    });
+  } catch (error) {
+    console.error("Error loading claims:", error);
+  }
+}
+
+// ── 2. OPEN MODAL & FETCH CLAIM DETAILS ──
+async function openClaimModal(claimId) {
+  currentClaimId = claimId; // Store it globally so the action buttons know which claim to update
+  
+  try {
+    const response = await fetch(`http://localhost:3000/api/claims/${claimId}`);
+    const claim = await response.json();
+
+    // Dynamically update the modal headers
+    const modalHead = document.querySelector('.modal-head h3');
+    modalHead.textContent = `Claim ${claim.id}`;
+    
+    // Update the policy holder section
+    const vals = document.querySelectorAll('.m-field .val');
+    vals[0].textContent = claim.customer; // Name
+    vals[2].textContent = claim.type;     // Vehicle/Type
+    vals[4].textContent = claim.amount;   // Est Cost
+    vals[5].textContent = `${claim.fraudScore}% — ${claim.fraudLevel.toUpperCase()}`; // Fraud Score
+
+    // Open the modal
+    document.getElementById('modalOverlay').classList.add('open');
+  } catch (error) {
+    console.error("Error fetching claim details:", error);
+  }
+}
+
+// ── 3. UPDATE CLAIM STATUS FROM MODAL ──
+async function updateClaimStatus(newStatus) {
+  if (!currentClaimId) return;
+
+  try {
+    const response = await fetch(`http://localhost:3000/api/claims/${currentClaimId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus })
+    });
+
+    if (response.ok) {
+      // Close the modal
+      closeModal();
+      
+      // Refresh the table so the new status shows up immediately!
+      loadAllClaims();
+    }
+  } catch (error) {
+    console.error("Error updating claim status:", error);
+  }
+}
+
+// ── 4. WIRE UP THE SEARCH BAR ──
+const searchInput = document.querySelector('.tb-search');
+if (searchInput) {
+  searchInput.addEventListener('input', (e) => {
+    loadAllClaims(e.target.value);
+  });
+}
+
+// Wire up the Modal Action Buttons in HTML (Replace the existing onclicks)
+document.querySelector('.ma-approve').onclick = () => updateClaimStatus('Approved');
+document.querySelector('.ma-hold').onclick = () => updateClaimStatus('In Review');
+document.querySelector('.ma-reject').onclick = () => updateClaimStatus('Rejected');
+
+// Load claims as soon as the page opens
+loadAllClaims();

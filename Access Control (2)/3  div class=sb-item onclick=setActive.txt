@@ -1,0 +1,1 @@
+<div class="sb-item" onclick="setActive(this); loadApprovedClaims()"><span class="ico">✅</span> Approved</div>

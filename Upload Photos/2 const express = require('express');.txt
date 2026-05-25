@@ -1,0 +1,174 @@
+const express = require('express');
+const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+const app = express();
+const PORT = 3000;
+
+app.use(cors());
+app.use(express.json());
+
+// ==========================================
+// 1. FILE UPLOAD CONFIGURATION (MULTER)
+// ==========================================
+// Create an 'uploads' directory if it doesn't exist
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+// Configure where and how to save the uploaded photos
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    // Save file with a timestamp to prevent naming collisions
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'insureai-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 20 * 1024 * 1024 } // 20MB limit per file
+});
+
+// Serve the uploads folder publicly so the frontend can preview the images
+app.use('/uploads', express.static(uploadDir));
+
+
+// ==========================================
+// 2. MOCK DATABASE
+// ==========================================
+let dashboardData = {
+  kpis: {
+    totalClaims: 1284,
+    fraudFlags: 47
+  },
+  claims: [
+    { id: "#INS-8821", customer: "Arjun Mehta", type: "Motor – Collision", amount: "₹42,000", fraudScore: "3%", fraudLevel: "low", status: "Approved" }
+  ]
+};
+
+
+// ==========================================
+// 3. API ENDPOINTS
+// ==========================================
+
+// Endpoint to handle the raw image file uploads
+app.post('/api/upload', upload.array('photos', 10), (req, res) => {
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ error: 'No files uploaded.' });
+  }
+
+  // Generate public URLs for the uploaded files
+  const fileUrls = req.files.map(file => `http://localhost:${PORT}/uploads/${file.filename}`);
+  
+  console.log(`📸 Received ${req.files.length} photos for processing.`);
+  res.status(200).json({ message: 'Upload successful', urls: fileUrls });
+});
+
+
+// Endpoint to run the AI Analysis
+app.post('/api/analyze', (req, res) => {
+  console.log("🤖 AI Analysis requested. Processing image data...");
+
+  // In a production environment, you would send the image URLs to an ML Microservice
+  // (e.g., Python FastAPI with YOLOv8 or AWS Rekognition) here.
+  // For now, we simulate the AI model's response.
+
+  const aiScenarios = [
+    {
+      type: "Car",
+      damages: [
+        { label: 'Front Bumper', pct: 78, color: 'var(--red)', severity: 'High' },
+        { label: 'Hood / Bonnet', pct: 34, color: 'var(--yellow)', severity: 'Moderate' }
+      ],
+      cost: '₹42,000–₹58,000', fraudScore: 3, confidence: 97.4,
+      recommendation: 'Minor to moderate front-end impact. Bumper replacement recommended. No metadata anomalies. Recommend approval.',
+      boxes: [
+        {top:'30%', left:'5%', w:'38%', h:'40%', lbl:'Bumper 78%'},
+        {top:'15%', left:'20%', w:'55%', h:'28%', lbl:'Hood 34%'}
+      ]
+    },
+    {
+      type: "Car",
+      damages: [
+        { label: 'Left Door Panel', pct: 82, color: 'var(--red)', severity: 'High' },
+        { label: 'Side Mirror', pct: 45, color: 'var(--yellow)', severity: 'Moderate' }
+      ],
+      cost: '₹85,000–₹1,10,000', fraudScore: 12, confidence: 95.1,
+      recommendation: 'Significant side-impact damage. Door panel requires replacement. Minor pre-existing rust noted. Review recommended.',
+      boxes: [
+        {top:'20%', left:'15%', w:'65%', h:'50%', lbl:'Door Panel 82%'},
+        {top:'30%', left:'70%', w:'20%', h:'30%', lbl:'Mirror 45%'}
+      ]
+    },
+    {
+      type: "Bike",
+      damages: [
+        { label: 'Front Fork / Suspension', pct: 88, color: 'var(--red)', severity: 'Severe' },
+        { label: 'Headlight Assembly', pct: 65, color: 'var(--orange)', severity: 'High' }
+      ],
+      cost: '₹18,000–₹24,000', fraudScore: 6, confidence: 98.2,
+      recommendation: 'Direct frontal collision on two-wheeler. Fork is bent and structurally compromised. Approve for immediate garage assessment.',
+      boxes: [
+        {top:'40%', left:'30%', w:'20%', h:'50%', lbl:'Fork 88%'},
+        {top:'20%', left:'35%', w:'15%', h:'15%', lbl:'Headlight 65%'}
+      ]
+    },
+    {
+      type: "Bike / Car Fraud",
+      damages: [
+        { label: 'Minor Scratches', pct: 12, color: 'var(--green)', severity: 'Low' }
+      ],
+      cost: '₹2,000–₹4,000', fraudScore: 84, confidence: 91.5,
+      recommendation: 'Damage does not align with reported high-speed collision. EXIF data indicates photo is 2 years old. FLAG FOR FRAUD REVIEW.',
+      boxes: [
+        {top:'50%', left:'40%', w:'10%', h:'10%', lbl:'Scratch 12%'}
+      ]
+    }
+  ];
+
+  // Pick a random scenario
+  const selectedScenario = aiScenarios[Math.floor(Math.random() * aiScenarios.length)];
+
+  // Simulate network & AI processing delay (2.5 seconds)
+  setTimeout(() => {
+    console.log(`✅ AI Analysis complete: Detected ${selectedScenario.type} damage.`);
+    res.status(200).json(selectedScenario);
+  }, 2500);
+});
+
+
+// Endpoint to save the finalized claim
+app.post('/api/claims', (req, res) => {
+  const { customer, type, amount, fraudScore } = req.body;
+  
+  // Create a new claim object
+  const newClaim = {
+    id: `#INS-${8822 + dashboardData.claims.length}`,
+    customer: customer || "Unknown Customer",
+    type: type || "Unspecified",
+    amount: `₹${parseInt(amount.replace(/,/g, '')).toLocaleString()}`,
+    fraudScore: `${fraudScore}%`,
+    fraudLevel: fraudScore < 25 ? 'low' : fraudScore < 60 ? 'med' : 'high',
+    status: fraudScore > 60 ? "Flagged" : "In Review"
+  };
+
+  // Add to database
+  dashboardData.claims.unshift(newClaim);
+  dashboardData.kpis.totalClaims += 1;
+  if (newClaim.status === "Flagged") dashboardData.kpis.fraudFlags += 1;
+
+  console.log(`💾 Saved new claim: ${newClaim.id} for ${newClaim.customer}`);
+  res.status(201).json({ message: "Claim submitted successfully", claim: newClaim });
+});
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`🚀 InsureAI Backend running at http://localhost:${PORT}`);
+});

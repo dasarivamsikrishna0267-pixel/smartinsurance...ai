@@ -1,0 +1,82 @@
+// --- PAYOUTS DATABASE (Simulated) ---
+// In a real banking setup, this would sync with a payment gateway like Razorpay or Stripe.
+let payouts = [
+  { id: "PAY-001", claimId: "INS-8815", customerName: "Vikram Nair", amount: 118500, method: "NEFT", status: "Completed", date: "2026-05-21T09:15:00Z" },
+  { id: "PAY-002", claimId: "INS-8821", customerName: "Arjun Mehta", amount: 42000, method: "UPI", status: "Initiated", date: "2026-05-21T09:40:00Z" },
+  { id: "PAY-003", claimId: "INS-8818", customerName: "Deepa Nair", amount: 68500, method: "IMPS", status: "Processing", date: "2026-05-20T14:20:00Z" }
+];
+
+// --- PAYOUTS API ROUTES ---
+
+// 1. GET: Fetch all payouts (for the Payouts ledger/table)
+app.get('/api/payouts', (req, res) => {
+  // Sort by date descending (newest first)
+  const sortedPayouts = [...payouts].sort((a, b) => new Date(b.date) - new Date(a.date));
+  res.json(sortedPayouts);
+});
+
+// 2. GET: Fetch a single payout by its ID
+app.get('/api/payouts/:id', (req, res) => {
+  const payoutId = req.params.id;
+  const payout = payouts.find(p => p.id === payoutId);
+  
+  if (!payout) {
+    return res.status(404).json({ error: "Payout record not found." });
+  }
+  
+  res.json(payout);
+});
+
+// 3. POST: Initiate a new payout (Triggered when an admin clicks "Approve & Pay")
+app.post('/api/payouts', (req, res) => {
+  const newPayout = req.body;
+  
+  // Basic validation to ensure we don't process a blank payment
+  if (!newPayout.claimId || !newPayout.amount) {
+    return res.status(400).json({ error: "Missing required payout details (claimId, amount)." });
+  }
+
+  // Generate a unique transaction ID
+  newPayout.id = `PAY-${Math.floor(Math.random() * 90000 + 10000)}`;
+  newPayout.status = newPayout.status || "Initiated";
+  newPayout.date = new Date().toISOString();
+  
+  payouts.push(newPayout);
+  
+  res.status(201).json({ message: "Payout initiated successfully", payout: newPayout });
+});
+
+// 4. PUT: Update a payout's status (e.g., webhook from a bank saying "Initiated" -> "Completed")
+app.put('/api/payouts/:id', (req, res) => {
+  const payoutId = req.params.id;
+  const payoutIndex = payouts.findIndex(p => p.id === payoutId);
+  
+  if (payoutIndex === -1) {
+    return res.status(404).json({ error: "Payout record not found." });
+  }
+  
+  // Only allow updating specific fields (like status) to prevent accidental data overwrites
+  if (req.body.status) {
+    payouts[payoutIndex].status = req.body.status;
+  }
+  
+  res.json({ message: "Payout status updated", payout: payouts[payoutIndex] });
+});
+
+// 5. DELETE: Cancel a payout (Only allowed if it hasn't cleared yet)
+app.delete('/api/payouts/:id', (req, res) => {
+  const payoutId = req.params.id;
+  const payoutIndex = payouts.findIndex(p => p.id === payoutId);
+  
+  if (payoutIndex === -1) {
+    return res.status(404).json({ error: "Payout record not found." });
+  }
+
+  // Prevent deleting completed transactions for audit compliance
+  if (payouts[payoutIndex].status === "Completed") {
+    return res.status(403).json({ error: "Cannot delete a completed payout transaction." });
+  }
+  
+  payouts = payouts.filter(p => p.id !== payoutId);
+  res.json({ message: "Payout cancelled successfully" });
+});

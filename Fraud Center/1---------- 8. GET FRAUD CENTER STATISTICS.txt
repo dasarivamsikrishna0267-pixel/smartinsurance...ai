@@ -1,0 +1,29 @@
+// 8. GET FRAUD CENTER STATISTICS
+app.get('/api/fraud-stats', (req, res) => {
+  // Filter claims that have been explicitly flagged by the AI or have a high fraud score
+  const flaggedClaims = claimsDatabase.filter(c => c.status === 'Flagged' || c.fraudScore >= 60);
+  
+  // Calculate total monetary value that is potentially at risk
+  let totalExposed = 0;
+  flaggedClaims.forEach(c => {
+    const numericValue = parseInt(c.amount.replace(/[^0-9.-]+/g,""));
+    totalExposed += numericValue;
+  });
+
+  // Calculate the average fraud score of these flagged items
+  let avgScore = 0;
+  if (flaggedClaims.length > 0) {
+    const totalScore = flaggedClaims.reduce((sum, c) => sum + c.fraudScore, 0);
+    avgScore = Math.round(totalScore / flaggedClaims.length);
+  }
+
+  // Count critical alerts (e.g., fraud score over 80%)
+  const criticalCount = flaggedClaims.filter(c => c.fraudScore >= 80).length;
+
+  res.status(200).json({
+    totalFlagged: flaggedClaims.length,
+    totalExposedValue: `₹${totalExposed.toLocaleString()}`,
+    averageFraudScore: `${avgScore}%`,
+    criticalAlerts: criticalCount
+  });
+});

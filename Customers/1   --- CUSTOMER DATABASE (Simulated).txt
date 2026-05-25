@@ -1,0 +1,68 @@
+// --- CUSTOMER DATABASE (Simulated) ---
+// In a real app, this would be a database like MongoDB, PostgreSQL, or MySQL.
+let customers = [
+  { id: "CUST-001", name: "Arjun Mehta", email: "arjun@example.com", policy: "INS-POL-1187", status: "Active" },
+  { id: "CUST-002", name: "Priya Sharma", email: "priya@example.com", policy: "INS-POL-2204", status: "Active" },
+  { id: "CUST-003", name: "Vikram Nair", email: "vikram@example.com", policy: "INS-POL-2209", status: "Pending" }
+];
+
+// --- CUSTOMER API ROUTES ---
+
+// 1. GET: Fetch all customers (for your dashboard table)
+app.get('/api/customers', (req, res) => {
+  res.json(customers);
+});
+
+// 2. GET: Fetch a single customer by their ID
+app.get('/api/customers/:id', (req, res) => {
+  const customerId = req.params.id;
+  const customer = customers.find(c => c.id === customerId);
+  
+  if (!customer) {
+    return res.status(404).json({ error: "Customer not found." });
+  }
+  
+  res.json(customer);
+});
+
+// 3. POST: Add a completely new customer
+app.post('/api/customers', express.json(), (req, res) => {
+  const newCustomer = req.body;
+  
+  // Create a simple unique ID
+  newCustomer.id = `CUST-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+  
+  customers.push(newCustomer);
+  
+  res.status(201).json({ message: "Customer added successfully", customer: newCustomer });
+});
+
+// 4. PUT: Update an existing customer's details
+app.put('/api/customers/:id', express.json(), (req, res) => {
+  const customerId = req.params.id;
+  const customerIndex = customers.findIndex(c => c.id === customerId);
+  
+  if (customerIndex === -1) {
+    return res.status(404).json({ error: "Customer not found." });
+  }
+  
+  // Update the customer data, keeping the original ID
+  customers[customerIndex] = { ...customers[customerIndex], ...req.body, id: customerId };
+  
+  res.json({ message: "Customer updated successfully", customer: customers[customerIndex] });
+});
+
+// 5. DELETE: Remove a customer
+app.delete('/api/customers/:id', (req, res) => {
+  const customerId = req.params.id;
+  const initialLength = customers.length;
+  
+  // Filter out the customer we want to delete
+  customers = customers.filter(c => c.id !== customerId);
+  
+  if (customers.length === initialLength) {
+    return res.status(404).json({ error: "Customer not found." });
+  }
+  
+  res.json({ message: "Customer deleted successfully" });
+});

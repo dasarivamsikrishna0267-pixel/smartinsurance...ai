@@ -1,0 +1,77 @@
+// ── LOAD AI INSIGHTS ──
+async function loadAIInsights() {
+  // 1. Show the main dashboard page container
+  showPage('dashPage');
+
+  // 2. Change the page headers
+  document.querySelector('.panel-head h3').textContent = 'AI Model Insights & Telemetry';
+  document.querySelector('.panel-head p').textContent = 'Performance metrics, confidence scores, and version control for active models';
+
+  try {
+    // 3. Fetch the AI Insights data from our backend
+    const response = await fetch('http://localhost:3000/api/ai-insights');
+    const data = await response.json();
+
+    // 4. Update the Top KPI Cards
+    const kpiVals = document.querySelectorAll('.kpi-val');
+    const kpiLabels = document.querySelectorAll('.kpi-label');
+    const kpiIcons = document.querySelectorAll('.kpi-icon');
+    
+    // Card 1: Total Processed
+    kpiVals[0].textContent = data.overview.totalProcessed.toLocaleString();
+    kpiLabels[0].textContent = "Total Images Processed";
+    kpiIcons[0].textContent = "📸";
+    kpiIcons[0].className = "kpi-icon cyan";
+    
+    // Card 2: Model Accuracy
+    kpiVals[1].textContent = data.overview.accuracyRate;
+    kpiLabels[1].textContent = "Avg. Model Accuracy";
+    kpiIcons[1].textContent = "🎯";
+    kpiIcons[1].className = "kpi-icon green";
+    
+    // Card 3: Avg Confidence
+    kpiVals[2].textContent = data.overview.avgConfidence;
+    kpiLabels[2].textContent = "Avg. Prediction Confidence";
+    kpiIcons[2].textContent = "🧠";
+    kpiIcons[2].className = "kpi-icon blue"; 
+    
+    // Card 4: False Positives
+    kpiVals[3].textContent = data.overview.falsePositiveRate;
+    kpiLabels[3].textContent = "False Positive Rate";
+    kpiIcons[3].textContent = "📉";
+    kpiIcons[3].className = "kpi-icon yellow";
+
+    // 5. Rewrite the Table Headers for AI Models instead of Claims
+    const thead = document.querySelector('.table-wrap thead tr');
+    thead.innerHTML = `
+      <th>Model Version</th>
+      <th>Deployment Date</th>
+      <th>Status</th>
+      <th>Release Notes</th>
+    `;
+
+    // 6. Populate the Table with Model Deployment Data
+    const tbody = document.querySelector('.table-wrap tbody');
+    tbody.innerHTML = ''; 
+
+    data.recentDeployments.forEach(model => {
+      // Determine pill styling based on active/archived status
+      let pillClass = model.status === 'Active' ? 'pill-green' : 'pill-yellow';
+
+      const row = document.createElement('tr');
+      // Remove the onclick event since these aren't claims you can approve/reject
+      row.removeAttribute('onclick'); 
+      
+      row.innerHTML = `
+        <td style="font-family: var(--mono); color: var(--cyan); font-weight: 600;">${model.version}</td>
+        <td>${model.date}</td>
+        <td><span class="status-pill ${pillClass}"><span class="pill-dot"></span>${model.status}</span></td>
+        <td style="font-size: 0.75rem; color: var(--text2); max-width: 300px; white-space: normal;">${model.notes}</td>
+      `;
+      tbody.appendChild(row);
+    });
+
+  } catch (error) {
+    console.error("Error loading AI Insights data:", error);
+  }
+}

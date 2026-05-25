@@ -1,0 +1,131 @@
+<div id="analyticsPage" class="page content" style="display:none;">
+    <div style="margin-bottom: 24px;">
+      <h2 style="font-family: var(--display); font-size: 1.4rem;">Performance Analytics</h2>
+      <p style="font-size: 0.8rem; color: var(--text3); margin-top: 4px;">System efficiency, AI accuracy, and regional trends.</p>
+    </div>
+
+    <div class="kpi-row">
+      <div class="kpi-card cyan">
+        <div class="kpi-label">AI Model Accuracy</div>
+        <div class="kpi-val" id="an-accuracy">--</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Auto-Approval Rate</div>
+        <div class="kpi-val" id="an-auto">--</div>
+      </div>
+      <div class="kpi-card yellow">
+        <div class="kpi-label">Avg Cost per Claim</div>
+        <div class="kpi-val" id="an-avg-cost">--</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">Est. Fraud Prevented</div>
+        <div class="kpi-val" id="an-saved" style="color: var(--green);">--</div>
+      </div>
+    </div>
+
+    <div class="bot-row" style="margin-top: 22px;">
+      
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h3>Regional Breakdown</h3>
+            <p>Claim volume and risk by state</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Region</th>
+                <th>Total Claims</th>
+                <th>Fraud Rate</th>
+                <th>Avg AI Processing</th>
+              </tr>
+            </thead>
+            <tbody id="regionalTableBody">
+              </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h3>Payout Trends (This Month)</h3>
+            <p>Disbursements mapped week over week</p>
+          </div>
+        </div>
+        <div class="mini-stat-list" id="trendsList">
+          </div>
+      </div>
+
+    </div>
+  </div>```
+
+---
+
+### Step 3: Wire it up with JavaScript
+
+Finally, open your `<script>` tag (or `script.js` file) and add the function to fetch and display this new data. You can paste this at the very bottom of your script:
+
+```javascript
+// ── FETCH ANALYTICS DATA ──
+async function loadAnalyticsData() {
+  try {
+    const response = await fetch('http://localhost:3000/api/analytics');
+    const data = await response.json();
+    
+    // 1. Populate Top KPIs
+    document.getElementById('an-accuracy').textContent = data.overview.aiAccuracy;
+    document.getElementById('an-auto').textContent = data.overview.autoApprovalRate;
+    document.getElementById('an-avg-cost').textContent = data.overview.avgCostPerClaim;
+    document.getElementById('an-saved').textContent = data.overview.totalSavedByAI;
+
+    // 2. Populate Regional Table
+    const tbody = document.getElementById('regionalTableBody');
+    tbody.innerHTML = '';
+    data.regionalStats.forEach(stat => {
+      // Color code fraud rates: High (red), Medium (yellow), Low (green)
+      const fraudVal = parseFloat(stat.fraudRate);
+      let fColor = 'var(--green)';
+      if (fraudVal > 5) fColor = 'var(--red)';
+      else if (fraudVal > 4) fColor = 'var(--yellow)';
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td style="font-weight: 600;">${stat.region}</td>
+        <td style="font-family: var(--mono);">${stat.claims}</td>
+        <td style="font-family: var(--mono); color: ${fColor}; font-weight: 600;">${stat.fraudRate}</td>
+        <td style="font-family: var(--mono); color: var(--cyan);">${stat.avgProcessing}</td>
+      `;
+      tbody.appendChild(row);
+    });
+
+    // 3. Populate Trends List
+    const trendsList = document.getElementById('trendsList');
+    trendsList.innerHTML = '';
+    data.payoutTrends.labels.forEach((label, index) => {
+      const val = data.payoutTrends.values[index];
+      // Calculate a percentage width for a simple bar visualization
+      const pct = (val / 2.5) * 100; // 2.5 is roughly our max value for the mock data
+
+      const item = document.createElement('div');
+      item.className = 'ms-item';
+      item.innerHTML = `
+        <div class="ms-left" style="width: 100%;">
+          <div class="ms-label" style="display:flex; justify-content:space-between; margin-bottom: 6px;">
+            <span>${label}</span>
+            <span style="font-family: var(--mono); font-weight: 600; color: var(--green);">₹${val}Cr</span>
+          </div>
+          <div class="ms-bar-wrap" style="width: 100%; background: var(--bg2);">
+            <div class="ms-bar" style="width: ${pct}%; background: linear-gradient(90deg, var(--green), #22c55e);"></div>
+          </div>
+        </div>
+      `;
+      trendsList.appendChild(item);
+    });
+
+  } catch (error) {
+    console.error("Failed to load analytics data:", error);
+  }
+}

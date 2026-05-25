@@ -1,0 +1,71 @@
+// --- POLICIES DATABASE (Simulated) ---
+// In a production environment, this links to your actual database tables.
+let policies = [
+  { id: "INS-POL-1187", customerId: "CUST-001", customerName: "Arjun Mehta", type: "Motor - Comprehensive", premium: 12500, coverage: 800000, status: "Active" },
+  { id: "INS-POL-2204", customerId: "CUST-002", customerName: "Priya Sharma", type: "Motor - Third Party", premium: 4200, coverage: 150000, status: "Active" },
+  { id: "INS-POL-2209", customerId: "CUST-003", customerName: "Vikram Nair", type: "Motor - Comprehensive", premium: 14800, coverage: 1000000, status: "Pending" },
+  { id: "INS-POL-1055", customerId: "CUST-004", customerName: "Deepa Nair", type: "Health - Family Floater", premium: 22000, coverage: 1500000, status: "Expired" }
+];
+
+// --- POLICIES API ROUTES ---
+
+// 1. GET: Fetch all policies (for your main Policies data table)
+app.get('/api/policies', (req, res) => {
+  res.json(policies);
+});
+
+// 2. GET: Fetch a single policy by its ID
+app.get('/api/policies/:id', (req, res) => {
+  const policyId = req.params.id;
+  const policy = policies.find(p => p.id === policyId);
+  
+  if (!policy) {
+    return res.status(404).json({ error: "Policy not found." });
+  }
+  
+  res.json(policy);
+});
+
+// 3. POST: Create a new policy (e.g., when a customer buys a new plan)
+app.post('/api/policies', (req, res) => {
+  const newPolicy = req.body;
+  
+  // Generate a standard InsureAI Policy ID
+  newPolicy.id = `INS-POL-${Math.floor(Math.random() * 9000 + 1000)}`;
+  
+  // Set default status if not provided
+  newPolicy.status = newPolicy.status || "Pending";
+  
+  policies.push(newPolicy);
+  
+  res.status(201).json({ message: "Policy created successfully", policy: newPolicy });
+});
+
+// 4. PUT: Update an existing policy (e.g., renewing a policy or changing coverage)
+app.put('/api/policies/:id', (req, res) => {
+  const policyId = req.params.id;
+  const policyIndex = policies.findIndex(p => p.id === policyId);
+  
+  if (policyIndex === -1) {
+    return res.status(404).json({ error: "Policy not found." });
+  }
+  
+  // Merge the existing policy data with the updated fields
+  policies[policyIndex] = { ...policies[policyIndex], ...req.body, id: policyId };
+  
+  res.json({ message: "Policy updated successfully", policy: policies[policyIndex] });
+});
+
+// 5. DELETE: Remove a policy (e.g., cancellation due to non-payment or error)
+app.delete('/api/policies/:id', (req, res) => {
+  const policyId = req.params.id;
+  const initialLength = policies.length;
+  
+  policies = policies.filter(p => p.id !== policyId);
+  
+  if (policies.length === initialLength) {
+    return res.status(404).json({ error: "Policy not found." });
+  }
+  
+  res.json({ message: "Policy deleted successfully" });
+});

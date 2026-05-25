@@ -1,0 +1,93 @@
+const express = require('express');
+const multer = require('multer');
+const crypto = require('crypto');
+const exifr = require('exifr');
+const cors = require('cors');
+
+const app = express();
+
+// Allow your HTML frontend to talk to this backend
+app.use(cors());
+
+// Configure multer to keep the uploaded file in memory for quick analysis
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+app.post('/api/forensics/analyze', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided.' });
+    }
+
+    const buffer = req.file.buffer;
+
+    // 1. Generate an Image Hash (Useful for catching duplicate claim submissions)
+    const fileHash = crypto.createHash('md5').update(buffer).digest('hex');
+
+    // 2. Initialize Forensics Variables
+    let metadataAnomalies = [];
+    let fraudScore = 0;
+
+    // 3. Extract and Analyze EXIF Metadata
+    try {
+      // Parse the hidden metadata directly from the file buffer
+      const exifData = await exifr.parse(buffer);
+
+      if (exifData) {
+        // Check for editing software signatures (Photoshop, Canva, etc.)
+        const software = (exifData.Software || '').toLowerCase();
+        if (['photoshop', 'lightroom', 'gimp', 'canva'].some(editor => software.includes(editor))) {
+          metadataAnomalies.push(`Editing software signature detected: ${exifData.Software}`);
+          fraudScore += 45; // High penalty for known editing software
+        }
+
+        // Check for Date mismatches (e.g., photo taken in 2022 but claimed for an accident today)
+        const dateOriginal = exifData.DateTimeOriginal;
+        const dateModified = exifData.ModifyDate;
+        if (dateOriginal && dateModified && dateOriginal.toString() !== dateModified.toString()) {
+          metadataAnomalies.push("Creation date and modification date do not match.");
+          fraudScore += 20;
+        }
+      } else {
+        // If an image has NO metadata, it was likely stripped (screenshots, WhatsApp images, etc.)
+        metadataAnomalies.push("No EXIF metadata found. Image may be a screenshot or downloaded from social media.");
+        fraudScore += 15;
+      }
+    } catch (exifError) {
+      metadataAnomalies.push("Could not parse image metadata.");
+      fraudScore += 10;
+    }
+
+    // 4. Simulated AI Pixel Analysis (Usually done via a separate Python microservice in production)
+    const aiConfidence = 94.5;
+
+    // Cap the fraud score at 100 for your UI
+    fraudScore = Math.min(fraudScore, 100);
+
+    // Determine risk bracket based on your HTML's Ring Chart thresholds
+    let riskLevel = "Low";
+    if (fraudScore > 60) riskLevel = "High";
+    else if (fraudScore > 25) riskLevel = "Medium";
+
+    // 5. Send the results back to the frontend
+    res.json({
+      filename: req.file.originalname,
+      hash: fileHash,
+      fraud_score: fraudScore,
+      risk_level: riskLevel,
+      ai_confidence: aiConfidence,
+      anomalies: metadataAnomalies,
+      recommendation: fraudScore > 60 ? "Flagged for manual review due to metadata manipulation." : "Metadata appears clean."
+    });
+
+  } catch (error) {
+    console.error("Analysis Error:", error);
+    res.status(500).json({ error: 'Server error during image analysis.' });
+  }
+});
+
+// Start the server
+const PORT = 8000;
+app.listen(PORT, () => {
+  console.log(`Forensics server running on http://localhost:${PORT}`);
+});

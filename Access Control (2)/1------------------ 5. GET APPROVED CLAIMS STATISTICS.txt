@@ -1,0 +1,25 @@
+// 5. GET APPROVED CLAIMS STATISTICS
+app.get('/api/approved-stats', (req, res) => {
+  // Filter only the claims that have been approved
+  const approvedClaims = claimsDatabase.filter(c => c.status === 'Approved');
+  
+  // Calculate total payout disbursed
+  let totalPayout = 0;
+  approvedClaims.forEach(c => {
+    const numericValue = parseInt(c.amount.replace(/[^0-9.-]+/g,""));
+    totalPayout += numericValue;
+  });
+
+  // Calculate Auto-Approval vs Manual Approval 
+  // (Assuming claims with a fraud score < 10 were auto-approved by the AI)
+  const autoApprovedCount = approvedClaims.filter(c => c.fraudScore < 10).length;
+  const manualApprovedCount = approvedClaims.length - autoApprovedCount;
+
+  res.status(200).json({
+    totalApproved: approvedClaims.length,
+    totalPayoutDisbursed: `₹${totalPayout.toLocaleString()}`,
+    autoApproved: autoApprovedCount,
+    manualApproved: manualApprovedCount,
+    avgProcessingTime: "12.4s" // Simulated historical metric
+  });
+});

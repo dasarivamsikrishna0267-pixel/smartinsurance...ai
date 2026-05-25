@@ -1,0 +1,26 @@
+// 4. GET PENDING REVIEW STATISTICS
+app.get('/api/pending-stats', (req, res) => {
+  // Filter only the claims that are waiting for review
+  const pendingClaims = claimsDatabase.filter(c => c.status === 'In Review');
+  
+  // Calculate stats based on the pending queue
+  const highRiskCount = pendingClaims.filter(c => c.fraudScore >= 60).length;
+  const medRiskCount = pendingClaims.filter(c => c.fraudScore >= 25 && c.fraudScore < 60).length;
+  const lowRiskCount = pendingClaims.filter(c => c.fraudScore < 25).length;
+  
+  // Calculate total monetary value locked in the pending queue
+  let totalValue = 0;
+  pendingClaims.forEach(c => {
+    const numericValue = parseInt(c.amount.replace(/[^0-9.-]+/g,""));
+    totalValue += numericValue;
+  });
+
+  res.status(200).json({
+    totalPending: pendingClaims.length,
+    highRisk: highRiskCount,
+    mediumRisk: medRiskCount,
+    lowRisk: lowRiskCount,
+    totalValueLocked: `₹${totalValue.toLocaleString()}`,
+    oldestClaimHours: 14 // Simulated SLA metric
+  });
+});

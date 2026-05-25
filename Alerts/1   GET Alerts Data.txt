@@ -1,0 +1,37 @@
+// GET: Alerts Data
+app.get('/api/alerts', (req, res) => {
+  const alertsData = [
+    { 
+      id: "ALT-001", type: "Fraud", severity: "high", 
+      title: "High Risk Fraud Detected", 
+      message: "Claim #INS-8819 flagged with 78% fraud score. Image metadata mismatch detected.", 
+      time: "10 mins ago", isNew: true 
+    },
+    { 
+      id: "ALT-002", type: "Action Required", severity: "high", 
+      title: "SLA Breach Warning", 
+      message: "4 claims in 'Pending Review' are approaching the 24-hour SLA limit.", 
+      time: "45 mins ago", isNew: true 
+    },
+    { 
+      id: "ALT-003", type: "System", severity: "low", 
+      title: "AI Model Updated", 
+      message: "Vision AI model 'Damage v4.2' deployed successfully. Expected accuracy improvement: 0.4%.", 
+      time: "2 hours ago", isNew: false 
+    },
+    { 
+      id: "ALT-004", type: "Payout", severity: "med", 
+      title: "Large Payout Initiated", 
+      message: "Payout batch #B-0441 (₹8.2L) requires secondary Super Admin authorization.", 
+      time: "3 hours ago", isNew: false 
+    },
+    { 
+      id: "ALT-005", type: "System", severity: "low", 
+      title: "Scheduled Maintenance", 
+      message: "Database optimization scheduled for Sunday, 02:00 AM IST. Expect 15 mins of downtime.", 
+      time: "1 day ago", isNew: false 
+    }
+  ];
+  
+  res.status(200).json(alertsData);
+});

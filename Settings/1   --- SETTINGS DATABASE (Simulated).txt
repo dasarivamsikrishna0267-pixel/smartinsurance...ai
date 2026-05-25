@@ -1,0 +1,64 @@
+// --- SETTINGS DATABASE (Simulated) ---
+// In a real app, this might be stored in a dedicated 'configurations' table or a JSON file.
+let systemSettings = {
+  general: {
+    companyName: "InsureAI Ltd.",
+    supportEmail: "admin@insureai.com",
+    timezone: "Asia/Kolkata",
+    maintenanceMode: false
+  },
+  aiConfiguration: {
+    // These tie directly into the logic of your frontend ring chart!
+    lowRiskThreshold: 25,     // 0-25% is Low Risk
+    highRiskThreshold: 60,    // 60%+ is High Risk
+    autoApproveLimit: 50000,  // Claims under ₹50,000 with Low Risk get auto-approved
+    activeModelVersion: "v4.2"
+  },
+  notifications: {
+    emailAlerts: true,
+    smsAlerts: false,
+    slackIntegration: true
+  }
+};
+
+// --- SETTINGS API ROUTES ---
+
+// 1. GET: Fetch current system settings
+app.get('/api/settings', (req, res) => {
+  res.json(systemSettings);
+});
+
+// 2. PUT: Update system settings
+// We use PUT here to overwrite the existing configuration with new values saved by the admin.
+app.put('/api/settings', (req, res) => {
+  const newSettings = req.body;
+
+  // Basic validation to ensure we aren't saving an empty object
+  if (!newSettings || Object.keys(newSettings).length === 0) {
+    return res.status(400).json({ error: "No settings data provided." });
+  }
+
+  // Deep merge the new settings into the existing settings.
+  // This ensures that if the frontend only sends the "aiConfiguration" updates, 
+  // we don't accidentally delete the "general" settings.
+  systemSettings = {
+    general: { ...systemSettings.general, ...(newSettings.general || {}) },
+    aiConfiguration: { ...systemSettings.aiConfiguration, ...(newSettings.aiConfiguration || {}) },
+    notifications: { ...systemSettings.notifications, ...(newSettings.notifications || {}) }
+  };
+
+  res.json({ 
+    message: "System settings updated successfully", 
+    settings: systemSettings 
+  });
+});
+
+// Optional: Reset to default settings (Good for testing/prototyping)
+app.post('/api/settings/reset', (req, res) => {
+  systemSettings = {
+    general: { companyName: "InsureAI Ltd.", supportEmail: "admin@insureai.com", timezone: "Asia/Kolkata", maintenanceMode: false },
+    aiConfiguration: { lowRiskThreshold: 25, highRiskThreshold: 60, autoApproveLimit: 50000, activeModelVersion: "v4.2" },
+    notifications: { emailAlerts: true, smsAlerts: false, slackIntegration: true }
+  };
+  res.json({ message: "Settings reset to default", settings: systemSettings });
+});

@@ -1,0 +1,64 @@
+const express = require('express');
+const cors = require('cors');
+
+const app = express();
+const PORT = 3000;
+
+// Enable CORS so your frontend can communicate with this backend
+app.use(cors());
+app.use(express.json());
+
+// ==========================================
+// MOCK DATABASE (In-Memory)
+// ==========================================
+
+const dashboardData = {
+  kpis: {
+    totalClaims: { value: "1,284", delta: "↑ 12.4%", trend: "up" },
+    totalPayouts: { value: "₹8.4Cr", delta: "↑ 8.1%", trend: "up" },
+    fraudFlags: { value: 47, delta: "↓ 3.2%", trend: "down" },
+    avgProcessingTime: { value: "14.2s", delta: "↑ 5.7%", trend: "up" }
+  },
+  chartData: {
+    months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    claims: [820, 940, 880, 1020, 1100, 970, 1150, 1080, 1200, 1140, 1280, 1284],
+    payouts: [600, 710, 650, 800, 870, 740, 920, 840, 980, 900, 1040, 1020]
+  },
+  recentClaims: [
+    { id: "#INS-8821", customer: "Arjun Mehta", type: "Motor – Collision", amount: "₹42,000", fraudScore: "3%", fraudLevel: "low", status: "Approved" },
+    { id: "#INS-8820", customer: "Priya Sharma", type: "Motor – Theft", amount: "₹2,85,000", fraudScore: "41%", fraudLevel: "med", status: "In Review" },
+    { id: "#INS-8819", customer: "Rahul Verma", type: "Motor – Fire", amount: "₹6,20,000", fraudScore: "78%", fraudLevel: "high", status: "Flagged" },
+    { id: "#INS-8818", customer: "Deepa Nair", type: "Motor – Collision", amount: "₹68,500", fraudScore: "7%", fraudLevel: "low", status: "Approved" }
+  ],
+  activityFeed: [
+    { icon: "✅", color: "green", title: "Claim #INS-8821 auto-approved", sub: "₹42,000 · Arjun Mehta · Fraud score 3%", time: "2m ago" },
+    { icon: "🚨", color: "red", title: "Fraud alert raised on #INS-8819", sub: "Score 78% · Image metadata mismatch detected", time: "6m ago" },
+    { icon: "📸", color: "cyan", title: "Vision AI processed 14 new claims", sub: "Avg confidence 96.8% · 0 errors", time: "11m ago" }
+  ]
+};
+
+// ==========================================
+// API ENDPOINTS
+// ==========================================
+
+// GET: All Dashboard Data
+// Serves everything in one request to minimize network calls on initial load
+app.get('/api/dashboard', (req, res) => {
+  res.status(200).json(dashboardData);
+});
+
+// GET: Live Ticker Data
+app.get('/api/dashboard/ticker', (req, res) => {
+  const tickerItems = [
+    "Claim #INS-8821 auto-approved — ₹42,000",
+    "Fraud flag raised on #INS-8819 — under review",
+    "New claim submitted — Vikram Nair, Mumbai",
+    "AI model updated — Damage v4.2 deployed"
+  ];
+  res.status(200).json({ ticker: tickerItems });
+});
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`🚀 Dashboard API running at http://localhost:${PORT}`);
+});

@@ -1,0 +1,28 @@
+// Fetch all policies from the backend
+fetch('http://localhost:8000/api/policies')
+  .then(response => response.json())
+  .then(data => {
+    console.log("Loaded Policies:", data);
+    
+    // Example: Loop through the policies to create rows for an HTML table
+    data.forEach(policy => {
+      // Determine the status color based on your CSS variables
+      let statusClass = "pill-cyan";
+      if (policy.status === "Active") statusClass = "pill-green";
+      if (policy.status === "Expired") statusClass = "pill-red";
+      if (policy.status === "Pending") statusClass = "pill-yellow";
+
+      const rowHTML = `
+        <tr>
+          <td class="claim-id">${policy.id}</td>
+          <td>${policy.customerName}</td>
+          <td>${policy.type}</td>
+          <td class="amount">₹${policy.premium.toLocaleString('en-IN')}</td>
+          <td><span class="status-pill ${statusClass}"><span class="pill-dot"></span>${policy.status}</span></td>
+        </tr>
+      `;
+      
+      // document.querySelector('#policies-table-body').innerHTML += rowHTML;
+    });
+  })
+  .catch(error => console.error("Error loading policies:", error));

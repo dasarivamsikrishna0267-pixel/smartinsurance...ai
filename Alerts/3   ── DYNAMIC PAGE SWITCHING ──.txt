@@ -1,0 +1,15 @@
+// ── DYNAMIC PAGE SWITCHING ──
+function showPage(pageId) {
+  // Get all elements with the class 'page'
+  const pages = document.querySelectorAll('.page');
+  pages.forEach(page => {
+    page.style.display = 'none'; // Hide them all
+  });
+  
+  // Show the requested page
+  const activePage = document.getElementById(pageId);
+  if (activePage) {
+    activePage.style.display = pageId === 'uploadPage' ? 'flex' : 'block';
+    if (pageId === 'uploadPage') activePage.style.flexDirection = 'column';
+  }
+}

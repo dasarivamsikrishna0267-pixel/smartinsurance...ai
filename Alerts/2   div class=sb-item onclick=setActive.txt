@@ -1,0 +1,3 @@
+<div class="sb-item" onclick="setActive(this);showPage('alertsPage');loadAlertsData()">
+  <span class="ico">🔔</span> Alerts <span class="sb-badge badge-red" id="alertBadge">2</span>
+</div>

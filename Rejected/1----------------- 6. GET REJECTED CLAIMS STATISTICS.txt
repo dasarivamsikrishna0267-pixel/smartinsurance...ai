@@ -1,0 +1,24 @@
+// 6. GET REJECTED CLAIMS STATISTICS
+app.get('/api/rejected-stats', (req, res) => {
+  // Filter only the claims that have been rejected
+  const rejectedClaims = claimsDatabase.filter(c => c.status === 'Rejected');
+  
+  // Calculate total monetary value saved (money not paid out)
+  let totalSaved = 0;
+  rejectedClaims.forEach(c => {
+    // Strip the rupee symbol and commas to do the math
+    const numericValue = parseInt(c.amount.replace(/[^0-9.-]+/g,""));
+    totalSaved += numericValue;
+  });
+
+  // Calculate reasons for rejection based on fraud score
+  const fraudRejections = rejectedClaims.filter(c => c.fraudScore >= 60).length;
+  const policyRejections = rejectedClaims.length - fraudRejections;
+
+  res.status(200).json({
+    totalRejected: rejectedClaims.length,
+    totalValueSaved: `₹${totalSaved.toLocaleString()}`,
+    fraudFlags: fraudRejections,
+    policyViolations: policyRejections
+  });
+});

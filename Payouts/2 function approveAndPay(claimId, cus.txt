@@ -1,0 +1,25 @@
+function approveAndPay(claimId, customerName, amount) {
+  // Package the payout data
+  const payoutData = {
+    claimId: claimId,
+    customerName: customerName,
+    amount: amount,
+    method: "NEFT" // Defaulting to bank transfer
+  };
+
+  // Send the POST request to initiate the payment
+  fetch('http://localhost:8000/api/payouts', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payoutData)
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log("Success:", data);
+    alert(`Payout of ₹${amount} initiated for ${customerName}!`);
+    closeModal(); // Close your UI modal
+  })
+  .catch(error => console.error("Payment Error:", error));
+}

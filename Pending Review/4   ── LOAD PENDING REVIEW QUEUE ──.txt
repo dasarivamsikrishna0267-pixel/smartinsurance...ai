@@ -1,0 +1,44 @@
+// ── LOAD PENDING REVIEW QUEUE ──
+async function loadPendingReviewQueue() {
+  // 1. Show the main dashboard/claims page container
+  showPage('dashPage');
+
+  // 2. Change the page headers so the user knows where they are
+  document.querySelector('.panel-head h3').textContent = 'Pending Review Queue';
+  document.querySelector('.panel-head p').textContent = 'Claims requiring manual adjuster approval';
+
+  try {
+    // 3. Fetch the specific Pending Stats from our new backend endpoint
+    const statsResponse = await fetch('http://localhost:3000/api/pending-stats');
+    const stats = await statsResponse.json();
+
+    // Update the sidebar badge with the real number of pending claims
+    document.getElementById('pendingBadge').textContent = stats.totalPending;
+
+    // 4. Update the Top KPI Cards to show Queue Stats instead of general Dashboard stats
+    const kpiVals = document.querySelectorAll('.kpi-val');
+    const kpiLabels = document.querySelectorAll('.kpi-label');
+    
+    // Card 1: Total Pending
+    kpiVals[0].textContent = stats.totalPending;
+    kpiLabels[0].textContent = "Total Pending Review";
+    
+    // Card 2: Value Locked
+    kpiVals[1].textContent = stats.totalValueLocked;
+    kpiLabels[1].textContent = "Est. Payout Value Locked";
+    
+    // Card 3: High Risk Flags
+    kpiVals[2].textContent = stats.highRisk;
+    kpiLabels[2].textContent = "High Risk (Action Required)";
+    
+    // Card 4: Oldest Claim
+    kpiVals[3].textContent = `${stats.oldestClaimHours} hrs`;
+    kpiLabels[3].textContent = "Oldest Claim in Queue";
+
+    // 5. Reuse our existing function to load ONLY "In Review" claims into the table!
+    loadAllClaims('', 'In Review');
+
+  } catch (error) {
+    console.error("Error loading pending review data:", error);
+  }
+}

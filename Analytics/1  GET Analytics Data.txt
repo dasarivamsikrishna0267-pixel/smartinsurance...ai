@@ -1,0 +1,23 @@
+// GET: Analytics Data
+app.get('/api/analytics', (req, res) => {
+  const analyticsData = {
+    overview: {
+      aiAccuracy: "97.4%",
+      autoApprovalRate: "42%",
+      avgCostPerClaim: "₹82,400",
+      totalSavedByAI: "₹1.2Cr" // Estimated fraud prevented
+    },
+    regionalStats: [
+      { region: "Karnataka", claims: 412, fraudRate: "4.2%", avgProcessing: "12s" },
+      { region: "Maharashtra", claims: 385, fraudRate: "5.1%", avgProcessing: "14s" },
+      { region: "Delhi", claims: 290, fraudRate: "6.8%", avgProcessing: "18s" },
+      { region: "Tamil Nadu", claims: 210, fraudRate: "3.5%", avgProcessing: "11s" }
+    ],
+    payoutTrends: {
+      labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
+      values: [1.2, 1.8, 1.5, 2.1] // In Crores
+    }
+  };
+  
+  res.status(200).json(analyticsData);
+});

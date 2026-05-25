@@ -1,0 +1,17 @@
+// Inside your existing PUT /api/settings route:
+app.put('/api/settings', (req, res) => {
+  const newSettings = req.body;
+  
+  // ... (your existing settings update logic here) ...
+
+  // Create an automatic audit log right before sending the response!
+  createInternalLog(
+    "USR-001",           // In a real app, you get this from the logged-in user's token
+    "Sneha Rao", 
+    "UPDATE_SETTINGS", 
+    "System Configuration", 
+    "Updated AI auto-approve limits and notification preferences."
+  );
+
+  res.json({ message: "System settings updated successfully", settings: systemSettings });
+});

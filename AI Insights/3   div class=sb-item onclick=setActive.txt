@@ -1,0 +1,1 @@
+<div class="sb-item" onclick="setActive(this); loadAIInsights()"><span class="ico">🤖</span> AI Insights</div>

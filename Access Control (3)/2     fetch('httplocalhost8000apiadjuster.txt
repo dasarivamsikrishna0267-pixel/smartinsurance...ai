@@ -1,0 +1,25 @@
+fetch('http://localhost:8000/api/adjusters')
+  .then(response => response.json())
+  .then(data => {
+    const adjList = document.querySelector('.adj-list');
+    adjList.innerHTML = ''; // Clear the hardcoded HTML
+    
+    data.forEach(adj => {
+      // Create the dynamic HTML for each adjuster based on your existing design
+      const adjHTML = `
+        <div class="adj-item">
+          <div class="adj-avatar" style="background:linear-gradient(135deg,#22d3ee,#60a5fa)">${adj.initials}</div>
+          <div class="adj-info">
+            <div class="adj-name">${adj.name}</div>
+            <div class="adj-role">${adj.role}</div>
+          </div>
+          <div class="adj-stat">
+            <div class="adj-num">${adj.claims}</div>
+            <div class="adj-lbl">claims</div>
+          </div>
+        </div>
+      `;
+      adjList.innerHTML += adjHTML;
+    });
+  })
+  .catch(error => console.error("Error loading adjusters:", error));

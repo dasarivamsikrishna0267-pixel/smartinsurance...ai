@@ -1,0 +1,80 @@
+// --- ADJUSTER DATABASE (Simulated) ---
+let adjusters = [
+  { id: "ADJ-001", initials: "AK", name: "Aditya Kumar", role: "Senior Adjuster", claims: 142 },
+  { id: "ADJ-002", initials: "NR", name: "Nisha Reddy", role: "Adjuster II", claims: 118 },
+  { id: "ADJ-003", initials: "PJ", name: "Pavan Joshi", role: "Adjuster I", claims: 96 },
+  { id: "ADJ-004", initials: "SM", name: "Sonali More", role: "Junior Adjuster", claims: 74 }
+];
+
+// --- ADJUSTER API ROUTES ---
+
+// 1. GET: Fetch all adjusters (for your "Top Adjusters" panel)
+app.get('/api/adjusters', (req, res) => {
+  // Sort by claims descending to match your "Top Adjusters" UI logic
+  const sortedAdjusters = [...adjusters].sort((a, b) => b.claims - a.claims);
+  res.json(sortedAdjusters);
+});
+
+// 2. GET: Fetch a single adjuster by their ID
+app.get('/api/adjusters/:id', (req, res) => {
+  const adjusterId = req.params.id;
+  const adjuster = adjusters.find(a => a.id === adjusterId);
+  
+  if (!adjuster) {
+    return res.status(404).json({ error: "Adjuster not found." });
+  }
+  
+  res.json(adjuster);
+});
+
+// 3. POST: Add a new adjuster to the team
+app.post('/api/adjusters', (req, res) => {
+  const newAdjuster = req.body;
+  
+  // Generate ID and extract initials from the name
+  newAdjuster.id = `ADJ-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+  
+  if (newAdjuster.name) {
+    const nameParts = newAdjuster.name.split(' ');
+    newAdjuster.initials = nameParts.length > 1 
+      ? (nameParts[0][0] + nameParts[1][0]).toUpperCase() 
+      : newAdjuster.name.substring(0, 2).toUpperCase();
+  } else {
+    newAdjuster.initials = "NA";
+  }
+  
+  // Default claims to 0 for a new hire
+  newAdjuster.claims = newAdjuster.claims || 0;
+  
+  adjusters.push(newAdjuster);
+  
+  res.status(201).json({ message: "Adjuster added successfully", adjuster: newAdjuster });
+});
+
+// 4. PUT: Update an existing adjuster (e.g., promoting them to a new role)
+app.put('/api/adjusters/:id', (req, res) => {
+  const adjusterId = req.params.id;
+  const adjusterIndex = adjusters.findIndex(a => a.id === adjusterId);
+  
+  if (adjusterIndex === -1) {
+    return res.status(404).json({ error: "Adjuster not found." });
+  }
+  
+  adjusters[adjusterIndex] = { ...adjusters[adjusterIndex], ...req.body, id: adjusterId };
+  
+  res.json({ message: "Adjuster updated successfully", adjuster: adjusters[adjusterIndex] });
+});
+
+// 5. DELETE: Remove an adjuster (e.g., if they leave the company)
+app.delete('/api/adjusters/:id', (req, res) => {
+  const adjusterId = req.params.id;
+  const initialLength = adjusters.length;
+  
+  adjusters = adjusters.filter(a => a.id !== adjusterId);
+  
+  if (adjusters.length === initialLength) {
+    return res.status(404).json({ error: "Adjuster not found." });
+  }
+  
+  res.json({ message: "Adjuster removed successfully" });
+});

@@ -1,0 +1,50 @@
+// ── LOAD REJECTED CLAIMS ──
+async function loadRejectedClaims() {
+  // 1. Show the main dashboard/claims page container
+  showPage('dashPage');
+
+  // 2. Change the page headers
+  document.querySelector('.panel-head h3').textContent = 'Rejected Claims Ledger';
+  document.querySelector('.panel-head p').textContent = 'Claims denied due to fraud, policy violations, or automated rules';
+
+  try {
+    // 3. Fetch the specific Rejected Stats from our backend
+    const statsResponse = await fetch('http://localhost:3000/api/rejected-stats');
+    const stats = await statsResponse.json();
+
+    // 4. Update the Top KPI Cards
+    const kpiVals = document.querySelectorAll('.kpi-val');
+    const kpiLabels = document.querySelectorAll('.kpi-label');
+    const kpiIcons = document.querySelectorAll('.kpi-icon');
+    
+    // Card 1: Total Rejected
+    kpiVals[0].textContent = stats.totalRejected;
+    kpiLabels[0].textContent = "Total Rejected Claims";
+    kpiIcons[0].textContent = "❌";
+    kpiIcons[0].className = "kpi-icon red";
+    
+    // Card 2: Value Saved (Capital Protected)
+    kpiVals[1].textContent = stats.totalValueSaved;
+    kpiLabels[1].textContent = "Capital Protected (Denied)";
+    kpiIcons[1].textContent = "🛡️";
+    kpiIcons[1].className = "kpi-icon green"; // Green because saving money is good!
+    
+    // Card 3: Fraud Rejections
+    kpiVals[2].textContent = stats.fraudFlags;
+    kpiLabels[2].textContent = "Rejected for Fraud";
+    kpiIcons[2].textContent = "🚨";
+    kpiIcons[2].className = "kpi-icon red";
+    
+    // Card 4: Policy Violations
+    kpiVals[3].textContent = stats.policyViolations;
+    kpiLabels[3].textContent = "Policy/Metadata Violations";
+    kpiIcons[3].textContent = "📑";
+    kpiIcons[3].className = "kpi-icon yellow";
+
+    // 5. Reuse our existing table function to load ONLY "Rejected" claims!
+    loadAllClaims('', 'Rejected');
+
+  } catch (error) {
+    console.error("Error loading rejected claims data:", error);
+  }
+}

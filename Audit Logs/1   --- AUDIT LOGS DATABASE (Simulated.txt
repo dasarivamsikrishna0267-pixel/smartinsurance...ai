@@ -1,0 +1,59 @@
+// --- AUDIT LOGS DATABASE (Simulated) ---
+// In a real application, this should be stored in a highly secure, append-only database.
+let auditLogs = [
+  { id: "LOG-9901", timestamp: "2026-05-21T09:42:15Z", userId: "USR-001", userName: "Sneha Rao", action: "LOGIN", resource: "System", details: "Successful login from IP 192.168.1.45" },
+  { id: "LOG-9902", timestamp: "2026-05-21T09:35:00Z", userId: "System", userName: "InsureAI Engine", action: "AUTO_APPROVE", resource: "Claim #INS-8821", details: "Claim auto-approved based on low fraud score (3%)" },
+  { id: "LOG-9903", timestamp: "2026-05-21T09:28:10Z", userId: "CUST-001", userName: "Arjun Mehta", action: "UPLOAD_CLAIM", resource: "Claim #INS-8821", details: "Uploaded 4 images for new motor collision claim" },
+  { id: "LOG-9904", timestamp: "2026-05-20T16:50:00Z", userId: "USR-003", userName: "Nisha Reddy", action: "FLAG_FRAUD", resource: "Claim #INS-8819", details: "Manually flagged for metadata mismatch on right fender image" }
+];
+
+// --- AUDIT LOGS API ROUTES ---
+
+// 1. GET: Fetch all audit logs (for the Audit Logs dashboard page)
+app.get('/api/audit-logs', (req, res) => {
+  // Always sort logs chronologically, newest first
+  const sortedLogs = [...auditLogs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+  res.json(sortedLogs);
+});
+
+// 2. POST: Create a new audit log
+// Note: In a real app, this route might be internal only, meaning the frontend 
+// doesn't call it directly. Instead, your other backend routes call a log function.
+app.post('/api/audit-logs', (req, res) => {
+  const newLog = req.body;
+  
+  if (!newLog.action || !newLog.resource) {
+    return res.status(400).json({ error: "Action and resource are required for an audit log." });
+  }
+
+  // Generate a sequential or UUID log ID
+  newLog.id = `LOG-${Math.floor(Math.random() * 90000 + 10000)}`;
+  
+  // ALWAYS set the timestamp on the server side so the user cannot fake the time
+  newLog.timestamp = new Date().toISOString();
+  
+  // If no user is provided, default to 'System'
+  newLog.userId = newLog.userId || "System";
+  newLog.userName = newLog.userName || "System Process";
+  
+  auditLogs.push(newLog);
+  
+  res.status(201).json({ message: "Audit log recorded successfully", log: newLog });
+});
+
+// --- HELPER FUNCTION FOR INTERNAL LOGGING ---
+// You can use this function inside your other routes (like Payouts or Settings)
+// to automatically generate a log whenever something important happens.
+function createInternalLog(userId, userName, action, resource, details) {
+  const internalLog = {
+    id: `LOG-${Math.floor(Math.random() * 90000 + 10000)}`,
+    timestamp: new Date().toISOString(),
+    userId: userId,
+    userName: userName,
+    action: action,
+    resource: resource,
+    details: details
+  };
+  auditLogs.push(internalLog);
+  console.log(`[AUDIT] ${action} on ${resource} by ${userName}`);
+}

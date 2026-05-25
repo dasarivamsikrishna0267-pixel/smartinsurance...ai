@@ -1,0 +1,45 @@
+function runAIAnalysis() {
+  analysisComplete = false;
+  submitBtn.disabled = true;
+  setStep(2);
+
+  // Show analyzing state UI
+  scanOverlay.classList.add('active');
+  processingBadge.style.display = 'flex';
+  doneBadge.style.display = 'none';
+
+  aiChip.className = 'ai-status-chip chip-analyzing';
+  aiChip.innerHTML = '<div class="spinner" style="width:12px;height:12px;border-width:1.5px"></div> Analyzing…';
+
+  // Get the most recently uploaded file
+  const fileToAnalyze = uploadedFiles[uploadedFiles.length - 1];
+  
+  // Package it up to send to the server
+  const formData = new FormData();
+  formData.append('file', fileToAnalyze);
+
+  // Send to our Node.js backend
+  fetch('http://localhost:8000/api/forensics/analyze', {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    // We merge the backend data with a simulated damage scenario for the UI
+    const randomScenario = damageScenarios[Math.floor(Math.random() * damageScenarios.length)];
+    
+    // Override the fake simulated data with our REAL backend data
+    randomScenario.fraudScore = data.fraud_score;
+    randomScenario.confidence = data.ai_confidence;
+    randomScenario.recommendation = data.recommendation;
+    
+    finishAnalysis(randomScenario);
+  })
+  .catch(error => {
+    console.error("Error connecting to backend:", error);
+    aiChip.className = 'ai-status-chip chip-waiting';
+    aiChip.textContent = '❌ Analysis Failed';
+    scanOverlay.classList.remove('active');
+    processingBadge.style.display = 'none';
+  });
+}

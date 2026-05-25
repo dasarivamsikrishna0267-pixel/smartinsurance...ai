@@ -1,0 +1,16 @@
+function changeUserRole(userId, newRole) {
+  fetch(`http://localhost:8000/api/access/users/${userId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: newRole })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.error) {
+      alert("Error: " + data.error);
+    } else {
+      alert(`Successfully updated role to ${newRole}!`);
+    }
+  })
+  .catch(error => console.error("Error updating role:", error));
+}

@@ -1,0 +1,9 @@
+// Fetch all audit logs from the backend
+fetch('http://localhost:8000/api/audit-logs')
+  .then(response => response.json())
+  .then(data => {
+    console.log("System Audit Logs:", data);
+    // Loop through 'data' and generate your <tr> rows for the audit logs table.
+    // e.g., showing data.timestamp, data.userName, data.action, data.details
+  })
+  .catch(error => console.error("Error loading audit logs:", error));
